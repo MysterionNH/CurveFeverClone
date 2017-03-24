@@ -1,12 +1,16 @@
 package CurveFeverClone;
 
+import javafx.application.Application;
+import javafx.stage.Stage;
+
 import java.util.Timer;
 import java.util.TimerTask;
 
-import javafx.stage.Stage;
-import javafx.application.Application;
-
 public class Main extends Application {
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(final Stage stage) throws Exception {
@@ -18,10 +22,6 @@ public class Main extends Application {
             public void run() {
                 gui.update();
             }
-        }, 0, 15); // every 15 ms
-    }
-
-    public static void main(String[] args) {
-        launch(args);
+        }, 0, 16); // every 15 ms
     }
 }
