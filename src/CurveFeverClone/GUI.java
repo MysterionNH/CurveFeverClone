@@ -4,9 +4,12 @@ import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Scene;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
@@ -47,6 +50,8 @@ class GUI {
     private Stage rootStage;
     private StackPane pauseScreen;
     private GraphicsContext fieldCanvas;
+
+    private boolean[][] field = new boolean[FIELD_WIDTH][FIELD_HEIGHT];
 
     GUI(Stage _stage) {
         rootStage = _stage;
@@ -190,73 +195,47 @@ class GUI {
 
             // collision detection
             // TODO: Implement a better (real) version
-            boolean collided = false;
 
             Point oldPos = p.getOldPosition();
             Point newPos = p.getNewPosition();
 
             if (!TELEPORT_ON_EDGE) {
-                collided = (newPos.x < 0 || newPos.x >= FIELD_WIDTH || newPos.y < 0 || newPos.y >= FIELD_HEIGHT);
+                p.setAlive(!(newPos.x < 0 || newPos.x >= FIELD_WIDTH || newPos.y < 0 || newPos.y >= FIELD_HEIGHT));
             }
 
-            /*if (!collided) {
-                if ((int) newPos.x != (int) oldPos.x && (int) newPos.y != (int) oldPos.y) {
+            if (p.getAlive()) {
+                Platform.runLater(() -> {
                     WritableImage temp = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
-                    Platform.runLater(() -> fieldCanvas.getCanvas().snapshot(null, temp));
+                    fieldCanvas.getCanvas().snapshot(new SnapshotParameters(), temp);
                     PixelReader reader = temp.getPixelReader();
-                    // TODO: This goes out of bounds sometimes, crashing the application
-                    //       needs only a small check against 0 and FIELD_WIDTH/HEIGHT
-                    Color tempColor = reader.getColor((int)( newPos.x + (p.getVelocity().x * 2)), (int)( newPos.y + (p.getVelocity().y * 2)));
-					System.out.println(tempColor);
-					collided = !(tempColor.equals(Color.BLACK) || tempColor.equals(Color.TRANSPARENT));
-					System.out.println(collided);
-					
-					/*if (newPos.x > oldPos.x) {
-						if (newPos.y > oldPos.y) {
-							tempColor = reader.getColor((int) newPos.x+3, (int) newPos.y+3);
-						}
-						else {
-							tempColor = reader.getColor((int) newPos.x+3, (int) newPos.y-3);
-						}
-					}
-					else {
-						if (newPos.y > oldPos.y) {
-							tempColor = reader.getColor((int) newPos.x-3, (int) newPos.y+3);
-						}
-						else {
-							tempColor = reader.getColor((int) newPos.x-3, (int) newPos.y-3);
-						}
-					}*/
 
-            // TODO: this still detects itself:
-            //collided = !(tempColor == Color.BLACK || tempColor == Color.TRANSPARENT);
-                    /*
-                    for (double x = (newPos.x > oldPos.x ? oldPos.x : newPos.x);
-                         x < (newPos.x > oldPos.x ? newPos.x : oldPos.x); x = (newPos.x > oldPos.x ? x + 1 : x - 1)) {
-                        for (double y = (newPos.y > oldPos.y ? oldPos.y : newPos.y);
-                             y < (newPos.y > oldPos.y ? newPos.y : oldPos.y); y = (newPos.y > oldPos.y ? y + 1 : y - 1)) {
-                                Color tempColor = reader.getColor((int) x, (int) y);
-                                if (tempColor == Color.BLACK || tempColor == Color.TRANSPARENT) continue;
-                                collided = true;
-                                break;
-                        }
-                        if (collided) break;
-                    }
-                    ///
-                }
-            }*/
-            if (collided) {
+                    int testX = (int) Math.round(p.getVelocity().x * p.getLineWidth()*0.65 + newPos.x);
+                    int testY = (int) Math.round(p.getVelocity().y * p.getLineWidth()*0.65 + newPos.y);
+
+                    if (testX < 0) testX = FIELD_WIDTH + testX;
+                    else if (testX >= FIELD_WIDTH) testX = testX - FIELD_WIDTH;
+
+                    if (testX < 0) testY = FIELD_HEIGHT + testY;
+                    else if (testY >= FIELD_HEIGHT) testY = testY - FIELD_HEIGHT;
+
+                    String pixelColor = reader.getColor(testX, testY).toString();
+
+                    p.setAlive(pixelColor.equals("0xffffffff") || pixelColor.equals("0x000000ff"));
+                });
+            }
+
+            if (!p.getAlive()) {
                 // TODO: Eliminated player, calc and update score
-                p.setAlive(false);
             }
 
             // add random breaks in lines
-            if (p.updateDrawCount() > (p.getDraw() ? 50 : 25)) {
+            /*if (p.updateDrawCount() > (p.getDraw() ? 50 : 25)) {
                 if (Math.random() < (p.getDraw() ? 0.10 : 0.66)) {
+                    System.out.println(p.getName() + p.getDraw());
                     p.setDraw(!p.getDraw());
                     p.setDrawCount(0);
                 } else p.setDrawCount(0);
-            }
+            }*/
 
             fieldCanvas.setStroke(p.getColor());
             fieldCanvas.setLineWidth(p.getLineWidth());
@@ -265,40 +244,59 @@ class GUI {
             if (p.getDraw()) {
                 fieldCanvas.strokeLine(oldPos.x, oldPos.y, newPos.x, newPos.y);
             } else {
-                // TODO: fix this mess
-                WritableImage temp = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
-                Platform.runLater(() -> fieldCanvas.getCanvas().snapshot(null, temp));
-                PixelReader reader = temp.getPixelReader();
+                Platform.runLater(() -> {
+                    WritableImage temp = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
+                    fieldCanvas.getCanvas().snapshot(null, temp);
+                    PixelReader reader = temp.getPixelReader();
 
-                boolean differentColor = false;
+                    int size = p.getLineWidth();
 
-                for (int x = -2; x < 3; x++) {
-                    for (int y = -2; y < 3; y++) {
-                        int finalX = x;
-                        int finalY = y;
+                    size = (size % 2 == 1? size : size + 1);
 
-                        if ((int)p.getOldPosition().x + finalX >= FIELD_WIDTH ||
-                                (int)p.getOldPosition().x + finalX < 0 ||
-                                (int)p.getOldPosition().y + finalY >= FIELD_WIDTH ||
-                                (int)p.getOldPosition().y + finalY < 0) continue;
+                    Color newPosColors[][] = new Color[size][size];
+                    
+                    for (int x = 0; x < size; x++) {
+                        for (int y = 0; y < size; y++) {
+                            int tempX = (int)newPos.x + x;
+                            int tempY = (int)newPos.y + y;
 
-                        final boolean[] tempB = new boolean[1];
-                        Platform.runLater(() -> tempB[0] = reader.getColor((int)p.getOldPosition().x + finalX,
-                                (int)p.getOldPosition().y + finalY).equals(Color.BLACK));
-                        if (tempB[0]){
-                            differentColor = true;
-                            break;
+                            if (tempX < 0) tempX = FIELD_WIDTH + tempX;
+                            else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+
+                            if (tempX < 0) tempY = FIELD_HEIGHT + tempY;
+                            else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
+                            
+                            newPosColors[x][y] = reader.getColor(tempX, tempY);
                         }
                     }
-                    if (differentColor) break;
-                }
 
-                fieldCanvas.setLineWidth(p.getLineWidth() + 1);
-                fieldCanvas.setStroke(differentColor ? Color.TRANSPARENT : Color.BLACK);
-                fieldCanvas.strokeLine(oldPos.x, oldPos.y, oldPos.x, oldPos.y);
-                fieldCanvas.setLineWidth(p.getLineWidth());
-                fieldCanvas.setStroke(p.getColor());
+                    p.setRemovedSquare(newPosColors);
+                });
                 fieldCanvas.strokeLine(newPos.x, newPos.y, newPos.x, newPos.y);
+                if (p.getDrawCount() != 0) {
+                    Platform.runLater(() -> {
+                        int size = p.getLineWidth();
+
+                        Color colors[][] = p.getRemovedSquare();
+
+                        for (int x = 0; x <= size; x++) {
+                            for (int y = 0; y <= size; y++) {
+                                int tempX = (int)newPos.x + x;
+                                int tempY = (int)newPos.y + y;
+
+                                if (tempX < 0) tempX = FIELD_WIDTH + tempX;
+                                else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+
+                                if (tempX < 0) tempY = FIELD_HEIGHT + tempY;
+                                else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
+
+                                fieldCanvas.getCanvas().getGraphicsContext2D().setFill(colors[x][y]);
+                                fieldCanvas.getCanvas().getGraphicsContext2D().fillRect(
+                                        (int)oldPos.x + tempX, (int)oldPos.y + tempY, 1, 1);
+                            }
+                        }
+                    });
+                }
             }
 
             if (TELEPORT_ON_EDGE) {
@@ -323,6 +321,7 @@ class GUI {
                     } else if (doNotMindMe.toLowerCase().contains("resetplz")) {
                         // less an easter egg more an dev tool ^^
                         // reset to empty field, move players to distinguished locations
+                        fieldCanvas.getCanvas().getGraphicsContext2D().setFill(Color.BLACK);
                         fieldCanvas.getCanvas().getGraphicsContext2D().fillRect(0, 0, FIELD_WIDTH, FIELD_HEIGHT);
 
                         int x = 100;
@@ -331,6 +330,7 @@ class GUI {
                         for (Player p : players) {
                             i++;
                             p.setNewPosition(new Point(x * i, y * i));
+                            p.setAlive(true);
                         }
                     }
                 } else {

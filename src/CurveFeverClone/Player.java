@@ -5,7 +5,11 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 
 class Player {
-    private static final double MAX_VELOCITY = 1.6;
+    static final double MAX_VELOCITY = 1.6;
+
+    private static final int MAX_SIZE = 13; // needs to be odd
+
+    private Color removedSquare[][] = new Color[MAX_SIZE][MAX_SIZE];
 
     private final SimpleStringProperty name;
 
@@ -23,7 +27,7 @@ class Player {
 
     private int drawCount = 0;
 
-    private boolean draw = false;
+    private boolean draw = true;//false;
     private boolean alive = true;
 
     Player() {
@@ -42,6 +46,12 @@ class Player {
 
         leftKeyCode = _leftKeyCode;
         rightKeyCode = _rightKeyCode;
+
+        for (int x = 0; x < removedSquare.length; x++) {
+            for (int y = 0; y < removedSquare[x].length; y++) {
+                removedSquare[x][y] = Color.TRANSPARENT;
+            }
+        }
     }
 
     boolean getAlive() {
@@ -137,5 +147,18 @@ class Player {
 
     public Point getVelocity() {
         return velocity;
+    }
+
+
+    public Color[][] getRemovedSquare() {
+        return removedSquare;
+    }
+
+    public void setRemovedSquare(Color[][] _removedSquare) {
+        for (int r = 0; r < _removedSquare.length; r++) {
+            for (int c = 0; c < _removedSquare[r].length; c++) {
+                removedSquare[r][c] = _removedSquare[r][c];
+            }
+        }
     }
 }
