@@ -22,6 +22,6 @@ public class Main extends Application {
             public void run() {
                 gui.update();
             }
-        }, 0, 16); // every 15 ms
+        }, 0, 16); // every 16 ms
     }
 }

@@ -6,10 +6,9 @@ import javafx.scene.paint.Color;
 
 class Player {
     static final double MAX_VELOCITY = 1.6;
+    static final int MAX_SIZE = 13;
 
-    private static final int MAX_SIZE = 13; // needs to be odd
-
-    private Color removedSquare[][] = new Color[MAX_SIZE][MAX_SIZE];
+    private Color savedSquare[][] = new Color[MAX_SIZE][MAX_SIZE];
 
     private final SimpleStringProperty name;
 
@@ -47,9 +46,9 @@ class Player {
         leftKeyCode = _leftKeyCode;
         rightKeyCode = _rightKeyCode;
 
-        for (int x = 0; x < removedSquare.length; x++) {
-            for (int y = 0; y < removedSquare[x].length; y++) {
-                removedSquare[x][y] = Color.TRANSPARENT;
+        for (int x = 0; x < savedSquare.length; x++) {
+            for (int y = 0; y < savedSquare[x].length; y++) {
+                savedSquare[x][y] = Color.TRANSPARENT;
             }
         }
     }
@@ -80,6 +79,13 @@ class Player {
     }
 
     public void setDraw(boolean _draw) {
+        if (_draw) { // reset saved square
+            for (int x = 0; x < savedSquare.length; x++) {
+                for (int y = 0; y < savedSquare[x].length; y++) {
+                    savedSquare[x][y] = Color.TRANSPARENT;
+                }
+            }
+        }
         draw = _draw;
     }
 
@@ -150,14 +156,14 @@ class Player {
     }
 
 
-    public Color[][] getRemovedSquare() {
-        return removedSquare;
+    public Color[][] getSavedSquare() {
+        return savedSquare;
     }
 
-    public void setRemovedSquare(Color[][] _removedSquare) {
+    public void setSavedSquare(Color[][] _removedSquare) {
         for (int r = 0; r < _removedSquare.length; r++) {
             for (int c = 0; c < _removedSquare[r].length; c++) {
-                removedSquare[r][c] = _removedSquare[r][c];
+                savedSquare[r][c] = _removedSquare[r][c];
             }
         }
     }

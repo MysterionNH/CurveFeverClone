@@ -7,9 +7,7 @@ import javafx.scene.Scene;
 import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.Image;
 import javafx.scene.image.PixelReader;
-import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
@@ -31,7 +29,7 @@ class GUI {
     // constants
     static final int DEFAULT_LINE_WIDTH = 3;
     // general settings
-    private static final int FIELD_WIDTH = 700;
+    private static final int FIELD_WIDTH = 750;
     private static final int FIELD_HEIGHT = FIELD_WIDTH;
     private static final double FOUR_THIRDS = 1.33333333;
     private static final int KEY_UPDATE_DELAY = 50;
@@ -39,6 +37,7 @@ class GUI {
     private final LinkedList<KeyCode> keyStack = new LinkedList<>();
     // start paused
     private boolean pause = true;
+    private boolean starting = false;
     // the players (currently maxed to four)
     private Player[] players = {new Player(), new Player(), new Player(), new Player()};
     // everything input related
@@ -83,39 +82,22 @@ class GUI {
         title.setFill(Paint.valueOf("WHITE"));
         title.setTextOrigin(VPos.BOTTOM);
         title.setTextAlignment(TextAlignment.CENTER);
-        title.setFont(Font.font("System", FontWeight.BOLD, 18));
-
-        // experiments regarding the score table
-        /*TableView<Player> table = new TableView<Player>();
-        final ObservableList<Player> data =
-        FXCollections.observableArrayList(players[0], players[1], players[2], players[3]);
+        title.setFont(Font.font("System", FontWeight.BOLD, 25));
 		
-        table.setEditable(false);
-		
-		table.setMinSize(166.667, 300);
-        table.setMaxSize(166.667, 300);
-		
-        TableColumn playerCol = new TableColumn("Player");
-        playerCol.setMinWidth(82);
-		playerCol.setMaxWidth(82);
-        playerCol.setCellValueFactory( new PropertyValueFactory<Player, String>("name") );
-
-        TableColumn scoreCol = new TableColumn("Score");
-        scoreCol.setMinWidth(82);
-		scoreCol.setMaxWidth(82);
-        scoreCol.setCellValueFactory( new PropertyValueFactory<Player, String>("score") );
- 
-        playerCol.setStyle("-fx-background-color: #16161D");
-        scoreCol.setStyle("-fx-background-color: #16161D");
-        table.setStyle("-fx-background-color: #16161D");
- 
-        table.setItems(data);
-        table.getColumns().addAll(playerCol, scoreCol);*/
+        Text tableHead = new Text("Player | Score");
+        tableHead.setFill(Paint.valueOf("WHITE"));
+        tableHead.setTextOrigin(VPos.BOTTOM);
+        tableHead.setTextAlignment(TextAlignment.CENTER);
+        tableHead.setFont(Font.font(java.awt.Font.MONOSPACED, FontWeight.BOLD, 18));
+        //tableHead.setFont(Font.font("Miriam Fixed", FontWeight.BOLD, 18));
 
         // wrap texts in VBox
         VBox vbox = new VBox(5);
         vbox.setAlignment(Pos.TOP_CENTER);
-        vbox.getChildren().addAll(title);
+        vbox.getChildren().add( title );
+		for (int i = 0; i < 7; i++) vbox.getChildren().add( new Text(""));
+        vbox.getChildren().add( tableHead );
+		
         // wrap VBox with texts in StackPane
         StackPane scoreView = new StackPane();
         scoreView.setMinSize((FIELD_WIDTH / 3), FIELD_HEIGHT);
@@ -182,127 +164,131 @@ class GUI {
     }
 
     void update() {
-        pauseScreen.setOpacity(pause ? 100 : 0);
         updateInputs();
-        if (!pause) updateGame();
+        if (!pause) {		
+            Platform.runLater(this::updateGame);
+		}
     }
 
     private void updateGame() {
+		WritableImage temp = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
+		fieldCanvas.getCanvas().snapshot(new SnapshotParameters(), temp);
         for (Player p : players) {
-            if (!p.getAlive()) continue;
-            // update player
-            p.move();
-
-            // collision detection
-            // TODO: Implement a better (real) version
-
-            Point oldPos = p.getOldPosition();
-            Point newPos = p.getNewPosition();
-
-            if (!TELEPORT_ON_EDGE) {
-                p.setAlive(!(newPos.x < 0 || newPos.x >= FIELD_WIDTH || newPos.y < 0 || newPos.y >= FIELD_HEIGHT));
-            }
-
-            if (p.getAlive()) {
-                Platform.runLater(() -> {
-                    WritableImage temp = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
-                    fieldCanvas.getCanvas().snapshot(new SnapshotParameters(), temp);
-                    PixelReader reader = temp.getPixelReader();
-
-                    int testX = (int) Math.round(p.getVelocity().x * p.getLineWidth()*0.65 + newPos.x);
-                    int testY = (int) Math.round(p.getVelocity().y * p.getLineWidth()*0.65 + newPos.y);
-
-                    if (testX < 0) testX = FIELD_WIDTH + testX;
-                    else if (testX >= FIELD_WIDTH) testX = testX - FIELD_WIDTH;
-
-                    if (testX < 0) testY = FIELD_HEIGHT + testY;
-                    else if (testY >= FIELD_HEIGHT) testY = testY - FIELD_HEIGHT;
-
-                    String pixelColor = reader.getColor(testX, testY).toString();
-
-                    p.setAlive(pixelColor.equals("0xffffffff") || pixelColor.equals("0x000000ff"));
-                });
-            }
-
-            if (!p.getAlive()) {
-                // TODO: Eliminated player, calc and update score
-            }
+			if (!p.getAlive()) continue;
+			// update player
+			p.move();
 
             // add random breaks in lines
-            /*if (p.updateDrawCount() > (p.getDraw() ? 50 : 25)) {
+            if (p.updateDrawCount() > (p.getDraw() ? 50 : 25)) {
                 if (Math.random() < (p.getDraw() ? 0.10 : 0.66)) {
-                    System.out.println(p.getName() + p.getDraw());
                     p.setDraw(!p.getDraw());
                     p.setDrawCount(0);
-                } else p.setDrawCount(0);
-            }*/
+                } else p.setDrawCount(1); // yes, one
+            }
 
-            fieldCanvas.setStroke(p.getColor());
-            fieldCanvas.setLineWidth(p.getLineWidth());
+			Point oldPos = p.getOldPosition();
+			Point newPos = p.getNewPosition();
 
-            // draw update
-            if (p.getDraw()) {
-                fieldCanvas.strokeLine(oldPos.x, oldPos.y, newPos.x, newPos.y);
-            } else {
-                Platform.runLater(() -> {
-                    WritableImage temp = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
-                    fieldCanvas.getCanvas().snapshot(null, temp);
-                    PixelReader reader = temp.getPixelReader();
+			if (!TELEPORT_ON_EDGE) {
+				p.setAlive(!(newPos.x < 0 || newPos.x >= FIELD_WIDTH || newPos.y < 0 || newPos.y >= FIELD_HEIGHT));
+			}
 
-                    int size = p.getLineWidth();
+			if (p.getAlive() && p.getDraw()) {
+					PixelReader reader = temp.getPixelReader();
 
-                    size = (size % 2 == 1? size : size + 1);
+					int testX = (int) Math.round(p.getVelocity().x * p.getLineWidth()*0.65 + newPos.x);
+					int testY = (int) Math.round(p.getVelocity().y * p.getLineWidth()*0.65 + newPos.y);
 
-                    Color newPosColors[][] = new Color[size][size];
-                    
-                    for (int x = 0; x < size; x++) {
-                        for (int y = 0; y < size; y++) {
-                            int tempX = (int)newPos.x + x;
-                            int tempY = (int)newPos.y + y;
+					if (testX < 0) testX = FIELD_WIDTH + testX;
+					else if (testX >= FIELD_WIDTH) testX = testX - FIELD_WIDTH;
 
-                            if (tempX < 0) tempX = FIELD_WIDTH + tempX;
-                            else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+					if (testX < 0) testY = FIELD_HEIGHT + testY;
+					else if (testY >= FIELD_HEIGHT) testY = testY - FIELD_HEIGHT;
 
-                            if (tempX < 0) tempY = FIELD_HEIGHT + tempY;
-                            else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
-                            
-                            newPosColors[x][y] = reader.getColor(tempX, tempY);
-                        }
-                    }
+					String pixelColor = reader.getColor(testX, testY).toString();
 
-                    p.setRemovedSquare(newPosColors);
-                });
-                fieldCanvas.strokeLine(newPos.x, newPos.y, newPos.x, newPos.y);
-                if (p.getDrawCount() != 0) {
-                    Platform.runLater(() -> {
-                        int size = p.getLineWidth();
+					//p.setAlive(pixelColor.equals("0xffffffff") || pixelColor.equals("0x000000ff"));
+			}
 
-                        Color colors[][] = p.getRemovedSquare();
+			if (!p.getAlive()) {
+				// TODO: Eliminated player, calc and update score
+			}
 
-                        for (int x = 0; x <= size; x++) {
-                            for (int y = 0; y <= size; y++) {
-                                int tempX = (int)newPos.x + x;
-                                int tempY = (int)newPos.y + y;
+			fieldCanvas.setStroke(p.getColor());
+			fieldCanvas.setLineWidth(p.getLineWidth());
 
-                                if (tempX < 0) tempX = FIELD_WIDTH + tempX;
-                                else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+			// draw update
+			if (p.getDraw()) {
+				fieldCanvas.strokeLine(oldPos.x, oldPos.y, newPos.x, newPos.y);
+			} else {
+			    // TODO: Still removing other lines as well
+			    if (p.getDrawCount() == 0) { // just updated
+                    fieldCanvas.setStroke(Color.BLACK);
 
-                                if (tempX < 0) tempY = FIELD_HEIGHT + tempY;
-                                else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
+                    int tempX = (-(int) Math.ceil(p.getLineWidth()/2.0)) + (int) oldPos.x;
+                    int tempY = (-(int) Math.ceil(p.getLineWidth()/2.0)) + (int) oldPos.y;
 
-                                fieldCanvas.getCanvas().getGraphicsContext2D().setFill(colors[x][y]);
-                                fieldCanvas.getCanvas().getGraphicsContext2D().fillRect(
-                                        (int)oldPos.x + tempX, (int)oldPos.y + tempY, 1, 1);
-                            }
-                        }
-                    });
+                    if (tempX < 0) tempX = FIELD_WIDTH + tempX;
+                    else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+
+                    if (tempY < 0) tempY = FIELD_HEIGHT + tempY;
+                    else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
+
+                    fieldCanvas.strokeRect(tempX, tempY, p.getLineWidth(), p.getLineWidth());
                 }
-            }
 
-            if (TELEPORT_ON_EDGE) {
-                p.setNewPosition(new Point(newPos.x < 0 ? FIELD_WIDTH : newPos.x >= FIELD_WIDTH ? 0 : newPos.x,
-                        newPos.y < 0 ? FIELD_HEIGHT : newPos.y >= FIELD_HEIGHT ? 0 : newPos.y));
-            }
+                Color savedSquare[][] = p.getSavedSquare();
+
+                for (int x = 0; x < savedSquare.length; x++) {
+                    for (int y = 0; y < savedSquare[x].length; y++) {
+
+                        int tempX = (int) Math.ceil(1.5* (-Math.ceil(p.getLineWidth() + 1/2.0) + x + oldPos.x));
+                        int tempY = (int) Math.ceil(1.5* (-Math.ceil(p.getLineWidth() + 1/2.0) + y + oldPos.y));
+
+                        if (tempX < 0) tempX = FIELD_WIDTH + tempX;
+                        else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+
+                        if (tempY < 0) tempY = FIELD_HEIGHT + tempY;
+                        else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
+
+                        fieldCanvas.setStroke(savedSquare[x][y]);
+                        fieldCanvas.fillRect(tempX, tempY, 1, 1);
+                    }
+                }
+
+				PixelReader reader = temp.getPixelReader();
+				savedSquare = p.getSavedSquare();
+
+                for (int x = 0; x < savedSquare.length; x++) {
+                    for (int y = 0; y < savedSquare[x].length; y++) {
+
+                        int tempX = (int) Math.ceil(1.5* (-Math.ceil(p.getLineWidth() + 1/2.0) + x + newPos.x));
+                        int tempY = (int) Math.ceil(1.5* (-Math.ceil(p.getLineWidth() + 1/2.0) + y + newPos.y));
+
+                        if (tempX < 0) tempX = FIELD_WIDTH + tempX;
+                        else if (tempX >= FIELD_WIDTH) tempX = tempX - FIELD_WIDTH;
+
+                        if (tempY < 0) tempY = FIELD_HEIGHT + tempY;
+                        else if (tempY >= FIELD_HEIGHT) tempY = tempY - FIELD_HEIGHT;
+
+                        savedSquare[x][y] = reader.getColor(tempX, tempY);
+                    }
+                }
+                p.setSavedSquare(savedSquare);
+
+                /*fieldCanvas.setLineWidth(p.getLineWidth() + 1);
+                fieldCanvas.setStroke(Color.BLACK);
+                fieldCanvas.strokeLine(oldPos.x, oldPos.y, oldPos.x, oldPos.y);
+                fieldCanvas.setLineWidth(p.getLineWidth());*/
+
+                fieldCanvas.setStroke(p.getColor());
+                fieldCanvas.strokeLine(newPos.x, newPos.y, newPos.x, newPos.y);
+			}
+
+			if (TELEPORT_ON_EDGE) {
+				p.setNewPosition(new Point(newPos.x < 0 ? FIELD_WIDTH : newPos.x >= FIELD_WIDTH ? 0 : newPos.x,
+						newPos.y < 0 ? FIELD_HEIGHT : newPos.y >= FIELD_HEIGHT ? 0 : newPos.y));
+			}
         }
     }
 
@@ -340,17 +326,17 @@ class GUI {
                 if (temp.equals(KeyCode.F11)) {
                     // fullscreen toggle
                     Platform.runLater(() -> rootStage.setFullScreen(!rootStage.isFullScreen()));
-                    pause = true; // pause on fullscreen toggle
+                    updatePause(true); // pause on fullscreen toggle
                     keyStack.remove(temp);
                     continue;
                 } else if (temp.equals(KeyCode.SPACE)) {
                     // pause toggle
-                    pause = !pause;
+                    updatePause(!pause);
                     keyStack.remove(temp);
                     continue;
                 } else if (temp.equals(KeyCode.ESCAPE)) {
                     if (pause) System.exit(0);
-                    pause = true;
+                    updatePause(true); // pause on fullscreen toggle
                     continue;
                 }
 
@@ -366,6 +352,32 @@ class GUI {
                 }
             }
             lastKeyUpdate = System.currentTimeMillis() + (pause ? 200 : 0);
+        }
+    }
+
+    private void updatePause(boolean _pause) {
+        if (pause != _pause && !starting) {
+            if (!_pause) {
+                starting = true;
+                try {
+                    pauseText.setText("3");
+                    Thread.sleep(1000);
+                    pauseText.setText("2");
+                    Thread.sleep(1000);
+                    pauseText.setText("1");
+                    Thread.sleep(1000);
+                    pauseText.setText("LOS!");
+                    Thread.sleep(250);
+                    pauseScreen.setOpacity(0);
+                    pauseText.setText("PAUSE");
+                    pause = false;
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
+                starting = false;
+            }
+            pauseScreen.setOpacity(_pause ? 100 : 0);
+            pause = _pause;
         }
     }
 }
