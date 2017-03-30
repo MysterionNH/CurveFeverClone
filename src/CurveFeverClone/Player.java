@@ -53,6 +53,12 @@ class Player {
         }
     }
 
+    void setName(String _name) { this.name.set(_name); }
+
+    void setLeftKeyCode(KeyCode _left) { leftKeyCode = _left; }
+
+    void setRightKeyCode(KeyCode _right) { rightKeyCode = _right; }
+
     boolean getAlive() {
         return alive;
     }

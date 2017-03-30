@@ -1,6 +1,7 @@
 package CurveFeverClone;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.stage.Stage;
 
 import java.util.Timer;
@@ -15,6 +16,7 @@ public class Main extends Application {
     @Override
     public void start(final Stage stage) throws Exception {
         GUI gui = new GUI(stage);
+        Platform.runLater(gui::setup);
 
         Timer timer = new Timer();
         timer.scheduleAtFixedRate(new TimerTask() {

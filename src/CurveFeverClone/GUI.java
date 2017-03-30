@@ -23,7 +23,10 @@ import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 class GUI {
     // constants
@@ -36,6 +39,9 @@ class GUI {
     private static final boolean TELEPORT_ON_EDGE = true;
     private final LinkedList<KeyCode> keyStack = new LinkedList<>();
     // start paused
+    private boolean setup = true;
+    private boolean enteringSring = false;
+    private boolean allowNext = false;
     private boolean pause = true;
     private boolean starting = false;
     // the players (currently maxed to four)
@@ -43,14 +49,18 @@ class GUI {
     // everything input related
     private long lastKeyUpdate;
     private String doNotMindMe = "";
+    private String currentText = "";
+
+    private KeyCode currentKey;
     // gui control
     private Text pauseText;
+    private Text settingsText;
     private Scene rootScene;
     private Stage rootStage;
     private StackPane pauseScreen;
     private GraphicsContext fieldCanvas;
 
-    private boolean[][] field = new boolean[FIELD_WIDTH][FIELD_HEIGHT];
+    private ArrayList<KeyCode> typedKeys = new ArrayList<>();
 
     GUI(Stage _stage) {
         rootStage = _stage;
@@ -83,7 +93,7 @@ class GUI {
         title.setTextOrigin(VPos.BOTTOM);
         title.setTextAlignment(TextAlignment.CENTER);
         title.setFont(Font.font("System", FontWeight.BOLD, 25));
-		
+
         Text tableHead = new Text("Player | Score");
         tableHead.setFill(Paint.valueOf("WHITE"));
         tableHead.setTextOrigin(VPos.BOTTOM);
@@ -97,7 +107,7 @@ class GUI {
         vbox.getChildren().add( title );
 		for (int i = 0; i < 7; i++) vbox.getChildren().add( new Text(""));
         vbox.getChildren().add( tableHead );
-		
+
         // wrap VBox with texts in StackPane
         StackPane scoreView = new StackPane();
         scoreView.setMinSize((FIELD_WIDTH / 3), FIELD_HEIGHT);
@@ -133,11 +143,38 @@ class GUI {
         pauseScreen.getChildren().add(vboxPause);
         StackPane.setAlignment(vboxPause, Pos.CENTER);
 
+        // setup screen
+        StackPane settings = new StackPane();
+        settings.setOpacity(100.00);
+        // make sure it covers the entire screen
+        settings.setMinSize(100000, 100000);
+        settings.setMaxSize(100000, 100000);
+        // make background black, but see-through-ish
+        settings.setStyle("-fx-background-color: rgba(0, 0, 0, 1);");
+        StackPane.setAlignment(settings, Pos.CENTER);
+
+        // settings stuff
+        // add text field to pause screen
+        settingsText = new Text("PAUSE");
+        settingsText.setTextOrigin(VPos.CENTER);
+        settingsText.setFill(Paint.valueOf("WHITE"));
+        settingsText.setTextAlignment(TextAlignment.CENTER);
+        settingsText.setFont(Font.font("System", FontWeight.BOLD, 50));
+
+        // wrap text in VBox
+        VBox vboxSettings = new VBox(5);
+        vboxSettings.setAlignment(Pos.CENTER);
+        vboxSettings.getChildren().add(settingsText);
+
+        // add VBox with text to pauseScreen
+        settings.getChildren().add(vboxSettings);
+        StackPane.setAlignment(vboxSettings, Pos.CENTER);
+
         // general layout setup
         StackPane layout = new StackPane();
         layout.setMinSize((FIELD_WIDTH * 4 / 3), FIELD_HEIGHT);
         layout.setMaxSize((FIELD_WIDTH * 4 / 3), FIELD_HEIGHT);
-        layout.getChildren().addAll(gameWrapper, scoreView, pauseScreen);
+        layout.getChildren().addAll(gameWrapper, scoreView, pauseScreen, settings);
         StackPane.setAlignment(layout, Pos.CENTER);
 
         // putting it all together
@@ -149,6 +186,7 @@ class GUI {
         // add layout to scene
         rootScene = new Scene(root);
         // add key listener for input
+        rootScene.setOnKeyTyped(event -> typedKeys.add(event.getCode()));
         rootScene.setOnKeyReleased(event -> keyStack.remove(event.getCode()));
         rootScene.setOnKeyPressed(event -> {
             if (!keyStack.contains(event.getCode())) keyStack.push(event.getCode());
@@ -161,6 +199,207 @@ class GUI {
         // temp players for testing until settings screen is implemented
         players[0] = new Player("Test", Color.BLUE, new Point(250, 250), 0, KeyCode.LEFT, KeyCode.RIGHT);
         players[1] = new Player("Test", Color.GOLD, new Point(125, 375), 180, KeyCode.A, KeyCode.D);
+    }
+
+    void setup() {
+        System.out.println(1);
+        setup = true;
+
+        String currentSettingsText = "ENTER NAME FOR PLAYER ONE:\n";
+
+        enteringSring = true;
+        allowNext = false;
+        settingsText.setText(currentSettingsText);
+
+        while (true) {
+            if (typedKeys.isEmpty()) continue;
+            if (typedKeys.get(typedKeys.size() - 1).equals(KeyCode.ENTER)) break;
+            for (KeyCode k : typedKeys) {
+                currentText += k.getName();
+                typedKeys.remove(k);
+            }
+            settingsText.setText(currentSettingsText + currentText);
+        }
+        System.out.println(4);
+
+        players[0].setName(currentText);
+        currentText = "";
+
+        currentSettingsText = "ENTER NAME FOR PLAYER TWO:\n";
+
+        enteringSring = true;
+        allowNext = false;
+        settingsText.setText(currentSettingsText);
+/*
+        while (!allowNext) {
+            settingsText.setText(currentSettingsText + currentText);
+            timer = new Timer();
+            Timer finalTimer2 = timer;
+            timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer2.cancel();
+                }
+            }, 0, 200);
+        }
+
+        players[1].setName(currentText);
+        currentText = "";
+
+        currentSettingsText = "ENTER NAME FOR PLAYER THREE:\n";
+
+        enteringSring = true;
+        allowNext = false;
+        settingsText.setText(currentSettingsText);
+
+        while (!allowNext) {
+            settingsText.setText(currentSettingsText + currentText);
+            timer = new Timer();
+            Timer finalTimer3 = timer;
+            timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer3.cancel();
+                }
+            }, 0, 200);
+        }
+
+        players[2].setName(currentText);
+        currentText = "";
+
+        currentSettingsText = "ENTER NAME FOR PLAYER FOUR:\n";
+
+        enteringSring = true;
+        allowNext = false;
+        settingsText.setText(currentSettingsText);
+
+        while (!allowNext) {
+            settingsText.setText(currentSettingsText + currentText);
+            timer = new Timer();
+            Timer finalTimer4 = timer;
+            timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer4.cancel();
+                }
+            }, 0, 200);
+        }
+
+        players[3].setName(currentText);
+        currentText = "";
+
+        allowNext = false;
+        currentSettingsText = "PRESS RIGHT KEY FOR PLAYER ONE";
+        settingsText.setText(currentSettingsText);
+        players[0].setRightKeyCode(currentKey);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer5 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                if (allowNext) finalTimer5.cancel();
+            }
+        }, 0, 200);
+        allowNext = false;
+        currentSettingsText = "PRESS LEFT KEY FOR PLAYER ONE";
+        settingsText.setText(currentSettingsText);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer6 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer6.cancel();
+                }
+            }, 0, 200);
+        players[0].setLeftKeyCode(currentKey);
+
+        allowNext = false;
+        currentSettingsText = "PRESS RIGHT KEY FOR PLAYER TWO";
+        settingsText.setText(currentSettingsText);
+        players[1].setRightKeyCode(currentKey);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer12 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer12.cancel();
+                }
+            }, 0, 200);
+        allowNext = false;
+        currentSettingsText = "PRESS LEFT KEY FOR PLAYER TWO";
+        settingsText.setText(currentSettingsText);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer7 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer7.cancel();
+                }
+            }, 0, 200);
+        players[1].setLeftKeyCode(currentKey);
+
+        allowNext = false;
+        currentSettingsText = "PRESS RIGHT KEY FOR PLAYER THREE";
+        settingsText.setText(currentSettingsText);
+        players[2].setRightKeyCode(currentKey);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer8 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer8.cancel();
+                }
+            }, 0, 200);
+        allowNext = false;
+        currentSettingsText = "PRESS LEFT KEY FOR PLAYER THREE";
+        settingsText.setText(currentSettingsText);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer9 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer9.cancel();
+                }
+            }, 0, 200);
+        players[2].setLeftKeyCode(currentKey);
+
+        allowNext = false;
+        currentSettingsText = "PRESS RIGHT KEY FOR PLAYER FOUR";
+        settingsText.setText(currentSettingsText);
+        players[3].setRightKeyCode(currentKey);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer10 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer10.cancel();
+                }
+            }, 0, 200);
+        allowNext = false;
+        currentSettingsText = "PRESS LEFT KEY FOR PLAYER FOUR";
+        settingsText.setText(currentSettingsText);
+        while (!allowNext) timer = new Timer();
+        Timer finalTimer11 = timer;
+        timer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    updateInputs();
+                    if (allowNext) finalTimer11.cancel();
+                }
+            }, 0, 200);
+        players[3].setLeftKeyCode(currentKey);
+
+        setup = false;
+        */
     }
 
     void update() {
@@ -207,7 +446,7 @@ class GUI {
 
 					String pixelColor = reader.getColor(testX, testY).toString();
 
-					//p.setAlive(pixelColor.equals("0xffffffff") || pixelColor.equals("0x000000ff"));
+					p.setAlive(pixelColor.equals("0xffffffff") || pixelColor.equals("0x000000ff"));
 			}
 
 			if (!p.getAlive()) {
@@ -295,6 +534,31 @@ class GUI {
     private void updateInputs() {
         if (!keyStack.isEmpty() && System.currentTimeMillis() - lastKeyUpdate > KEY_UPDATE_DELAY) {
             for (KeyCode temp : keyStack) {
+                if (setup) {
+                    if (enteringSring) {
+                        if (temp.equals(KeyCode.ENTER)) {
+                            enteringSring = false;
+                        } else if (temp.equals(KeyCode.BACK_SPACE)) {
+                            currentText = currentText.substring(0, currentText.length() - 2 > -1 ? currentText.length() - 2 : 0);
+                        } else if (temp.isDigitKey() || temp.isLetterKey()) {
+                            currentText += temp.getName();
+                        }
+                    } else if (!temp.equals(KeyCode.ESCAPE) && !temp.equals(KeyCode.SPACE)) {
+                        boolean isUsed = false;
+                        for (Player p : players) {
+                            if (temp.equals(p.getLeftKeyCode()) || temp.equals(p.getRightKeyCode())) {
+                                isUsed = true;
+                                break;
+                            }
+                        }
+                        if (!isUsed) {
+                            currentKey = temp;
+                        }
+                    }
+                    allowNext = true;
+                    continue;
+                }
+
                 if (pause) {
                     doNotMindMe += temp.getName();
                     if (doNotMindMe.toLowerCase().contains("upupdowndownleftrightleftrightba")) {
