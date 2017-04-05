@@ -5,10 +5,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 
 class Player {
-    static final double MAX_VELOCITY = 1.6;
     static final int MAX_SIZE = 13;
-
-    private Color savedSquare[][] = new Color[MAX_SIZE][MAX_SIZE];
+    static final double MAX_VELOCITY = 1.6;
 
     private final SimpleStringProperty name;
 
@@ -26,7 +24,7 @@ class Player {
 
     private int drawCount = 0;
 
-    private boolean draw = true;//false;
+    private boolean draw = false;
     private boolean alive = true;
 
     Player() {
@@ -45,19 +43,7 @@ class Player {
 
         leftKeyCode = _leftKeyCode;
         rightKeyCode = _rightKeyCode;
-
-        for (int x = 0; x < savedSquare.length; x++) {
-            for (int y = 0; y < savedSquare[x].length; y++) {
-                savedSquare[x][y] = Color.TRANSPARENT;
-            }
-        }
     }
-
-    void setName(String _name) { this.name.set(_name); }
-
-    void setLeftKeyCode(KeyCode _left) { leftKeyCode = _left; }
-
-    void setRightKeyCode(KeyCode _right) { rightKeyCode = _right; }
 
     boolean getAlive() {
         return alive;
@@ -67,31 +53,24 @@ class Player {
         alive = _alive;
     }
 
-    public int updateDrawCount() {
+    int updateDrawCount() {
         drawCount++;
         return drawCount;
     }
 
-    public int getDrawCount() {
+    int getDrawCount() {
         return drawCount;
     }
 
-    public void setDrawCount(int _drawCount) {
+    void setDrawCount(int _drawCount) {
         drawCount = _drawCount;
     }
 
-    public boolean getDraw() {
+    boolean getDraw() {
         return draw;
     }
 
-    public void setDraw(boolean _draw) {
-        if (_draw) { // reset saved square
-            for (int x = 0; x < savedSquare.length; x++) {
-                for (int y = 0; y < savedSquare[x].length; y++) {
-                    savedSquare[x][y] = Color.TRANSPARENT;
-                }
-            }
-        }
+    void setDraw(boolean _draw) {
         draw = _draw;
     }
 
@@ -111,6 +90,10 @@ class Player {
         return name.get();
     }
 
+    void setName(String _name) {
+        this.name.set(_name);
+    }
+
     Color getColor() {
         return color;
     }
@@ -123,16 +106,28 @@ class Player {
         return leftKeyCode;
     }
 
+    void setLeftKeyCode(KeyCode _left) {
+        leftKeyCode = _left;
+    }
+
     KeyCode getRightKeyCode() {
         return rightKeyCode;
+    }
+
+    void setRightKeyCode(KeyCode _right) {
+        rightKeyCode = _right;
     }
 
     int getLineWidth() {
         return lineWidth;
     }
 
-    void setLineWidth(int _lineWidth) {
-        lineWidth = _lineWidth;
+    void enlargeLine() {
+        if (!(lineWidth + 1 > MAX_SIZE)) lineWidth++;
+    }
+
+    void shrinkLine() {
+        if (!(lineWidth - 1 < 0)) lineWidth--;
     }
 
     void move() {
@@ -157,20 +152,7 @@ class Player {
         velocity.y = MAX_VELOCITY * Math.sin(Math.toRadians(angle));
     }
 
-    public Point getVelocity() {
+    Point getVelocity() {
         return velocity;
-    }
-
-
-    public Color[][] getSavedSquare() {
-        return savedSquare;
-    }
-
-    public void setSavedSquare(Color[][] _removedSquare) {
-        for (int r = 0; r < _removedSquare.length; r++) {
-            for (int c = 0; c < _removedSquare[r].length; c++) {
-                savedSquare[r][c] = _removedSquare[r][c];
-            }
-        }
     }
 }
