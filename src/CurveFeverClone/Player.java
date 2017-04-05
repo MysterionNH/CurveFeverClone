@@ -4,9 +4,10 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 
+import static CurveFeverClone.GUI.DEFAULT_LINE_WIDTH;
+
 class Player {
-    static final int MAX_SIZE = 13;
-    static final double MAX_VELOCITY = 1.6;
+    private static final double MAX_VELOCITY = 1.6;
 
     private final SimpleStringProperty name;
 
@@ -15,8 +16,6 @@ class Player {
     private Point newPosition = new Point();
     private Point oldPosition = new Point();
     private Point velocity = new Point();
-
-    private int lineWidth = GUI.DEFAULT_LINE_WIDTH;
 
     private int angle = 0;
     private KeyCode leftKeyCode;
@@ -90,44 +89,20 @@ class Player {
         return name.get();
     }
 
-    void setName(String _name) {
-        this.name.set(_name);
-    }
-
     Color getColor() {
         return color;
-    }
-
-    void setColor(Color _color) {
-        color = _color;
     }
 
     KeyCode getLeftKeyCode() {
         return leftKeyCode;
     }
 
-    void setLeftKeyCode(KeyCode _left) {
-        leftKeyCode = _left;
-    }
-
     KeyCode getRightKeyCode() {
         return rightKeyCode;
     }
 
-    void setRightKeyCode(KeyCode _right) {
-        rightKeyCode = _right;
-    }
-
     int getLineWidth() {
-        return lineWidth;
-    }
-
-    void enlargeLine() {
-        if (!(lineWidth + 1 > MAX_SIZE)) lineWidth++;
-    }
-
-    void shrinkLine() {
-        if (!(lineWidth - 1 < 0)) lineWidth--;
+        return DEFAULT_LINE_WIDTH;
     }
 
     void move() {

@@ -30,8 +30,9 @@ class GUI {
     // constants
     static final int DEFAULT_LINE_WIDTH = 3;
     // general settings
-    private static final int COUNTDOWN_LENGTH = 0;
+    private static final int COUNTDOWN_LENGTH = 2;
     private static final int FIELD_WIDTH = 750;
+    @SuppressWarnings("SuspiciousNameCombination")
     private static final int FIELD_HEIGHT = FIELD_WIDTH;
     private static final double FOUR_THIRDS = 1.33333333;
     private static final int KEY_UPDATE_DELAY = 50;
@@ -53,14 +54,16 @@ class GUI {
 
     private WritableImage canvasSnapshot = new WritableImage(FIELD_WIDTH, FIELD_HEIGHT);
     private SnapshotParameters params = new SnapshotParameters();
-    private PixelReader reader = canvasSnapshot.getPixelReader();
 
     // gui control
     private Text pauseText;
-    private Scene rootScene;
     private Stage rootStage;
     private StackPane pauseScreen;
     private GraphicsContext fieldCanvas, invFieldCanvas;
+
+    private Text tableRows[] = { new Text(), new Text(), new Text(), new Text() };
+    private int dead = 0;
+    private int score[] = new int[4];
 
     private ArrayList<KeyCode> typedKeys = new ArrayList<>();
 
@@ -105,19 +108,28 @@ class GUI {
         title.setTextAlignment(TextAlignment.CENTER);
         title.setFont(Font.font("System", FontWeight.BOLD, 25));
 
-        Text tableHead = new Text("Player | Score");
+        Text tableHead = new Text("Player  |  Score");
         tableHead.setFill(Paint.valueOf("WHITE"));
         tableHead.setTextOrigin(VPos.BOTTOM);
         tableHead.setTextAlignment(TextAlignment.CENTER);
         tableHead.setFont(Font.font(java.awt.Font.MONOSPACED, FontWeight.BOLD, 18));
         //tableHead.setFont(Font.font("Miriam Fixed", FontWeight.BOLD, 18));
 
+        for (int i = 0; i < 4; i++) {
+            tableRows[i].setFill(Paint.valueOf("WHITE"));
+            tableRows[i].setTextOrigin(VPos.BOTTOM);
+            tableRows[i].setTextAlignment(TextAlignment.CENTER);
+            tableRows[i].setFont(Font.font(java.awt.Font.MONOSPACED,16));
+        }
+
         // wrap texts in VBox
         VBox vbox = new VBox(5);
         vbox.setAlignment(Pos.TOP_CENTER);
+        vbox.setStyle("-fx-background-color: #202020");
         vbox.getChildren().add(title);
-        for (int i = 0; i < 7; i++) vbox.getChildren().add(new Text(""));
+        for (int i = 0; i < 8; i++) vbox.getChildren().add(new Text(""));
         vbox.getChildren().add(tableHead);
+        for (Text row : tableRows) vbox.getChildren().add(row);
 
         // wrap VBox with texts in StackPane
         StackPane scoreView = new StackPane();
@@ -168,7 +180,7 @@ class GUI {
         StackPane.setAlignment(root, Pos.CENTER);
 
         // add layout to scene
-        rootScene = new Scene(root);
+        Scene rootScene = new Scene(root);
         // add key listener for input
         rootScene.setOnKeyTyped(event -> typedKeys.add(event.getCode()));
         rootScene.setOnKeyReleased(event -> keyStack.remove(event.getCode()));
@@ -189,6 +201,13 @@ class GUI {
                 350, KeyCode.J, KeyCode.L);
         players[3] = new Player("Player4", Color.MAGENTA, new Point(FIELD_HEIGHT * 0.84, FIELD_HEIGHT * 0.37),
                 205, KeyCode.NUMPAD4, KeyCode.NUMPAD6);
+        // draw a first point
+        for (int i = 0; i < 4; i++) {
+            invFieldCanvas.setStroke(players[i].getColor());
+            invFieldCanvas.setLineWidth(players[i].getLineWidth());
+            invFieldCanvas.strokeLine(players[i].getNewPosition().x, players[i].getNewPosition().y,
+                    players[i].getNewPosition().x, players[i].getNewPosition().y);
+        }
     }
 
     void update() {
@@ -196,15 +215,17 @@ class GUI {
         updateInputs();
         if (!pause) {
             if (firstCycles) {
-                if (cycleCount > (1000.0 / Main.TICK_SPEED) / 1.0) firstCycles = false;
+                if (cycleCount > (1000.0 / Main.TICK_SPEED) / 0.25) firstCycles = false;
             } else Platform.runLater(this::updateGame);
         }
     }
 
     private void updateGame() {
         fieldCanvas.getCanvas().snapshot(params, canvasSnapshot);
-        reader = canvasSnapshot.getPixelReader();
+        PixelReader reader = canvasSnapshot.getPixelReader();
+        int index = -1;
         for (Player p : players) {
+            index++;
             if (!p.getAlive()) continue;
             // update player
             p.move();
@@ -238,7 +259,36 @@ class GUI {
             }
 
             if (!p.getAlive()) {
-                // TODO: Eliminated player, calc and update score
+                dead++;
+                switch (dead) {
+                    case 4 :
+                    {
+                        score[index] += 5;
+                        break;
+                    }
+                    case 3 :
+                    {
+                        score[index] += 3;
+                        break;
+                    }
+                    case 2 :
+                    {
+                        score[index] += 2;
+                        break;
+                    }
+                    case 1 :
+                    {
+                        score[index] += 0;
+                        break;
+                    }
+                    default:
+                    {
+                        System.out.println("Da fuq? " + dead + " are dead, apparently ^^");
+                    }
+                }
+                for (Text row : tableRows) {
+                    row.setText(p.getName() + " | " + score[index]);
+                }
             }
 
             // draw update
@@ -275,7 +325,7 @@ class GUI {
             for (KeyCode temp : keyStack) {
                 if (pause) {
                     stringBuilder.append(temp.getName());
-                    if (stringBuilder.toString().toLowerCase().contains("upupdowndownleftrightleftrightba")) { // konamicode ^^
+                    if (stringBuilder.toString().toLowerCase().contains("upupdowndownleftrightleftrightba")) {
                         stringBuilder.delete(0, stringBuilder.length());
                         // playing loz solved puzzle jingle
                         Media sound = new Media(new File("CurveFeverClone/resources/secret.mp3").toURI().toString());
@@ -296,7 +346,6 @@ class GUI {
                             p.setAlive(true);
                         }
                     }
-                    System.out.println(stringBuilder.toString());
                 } else {
                     stringBuilder.delete(0, stringBuilder.length());
                 }
@@ -342,7 +391,9 @@ class GUI {
                 try {
                     for (int i = COUNTDOWN_LENGTH; i > 0; i--) {
                         pauseText.setText(Integer.toString(i));
-                        Thread.sleep(1000);
+                        synchronized(this) {
+                            this.wait(1000);
+                        }
                     }
                     pauseText.setText("PAUSE");
                 } catch (InterruptedException ex) {
