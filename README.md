@@ -16,5 +16,16 @@ Final submission _missing_ features:
 - complete UI
 - _real_ reset  
 - Items
+  
+  
+## Controls:  
 
-Latest stable: _currently the same as final submission_
+|         |      Left      |      Right      |
+|:-------:|:--------------:|:---------------:|
+|   Blue  | Left Arrow Key | Right Arrow Key |
+|  Yellow |        A       |        D        |
+|  Green  |        J       |        L        |
+| Magenta |   NumBlock 4   |    NumBlock 6   |  
+  
+Pause toggle: **Space**
+Fullscreen toggle: **F11**
