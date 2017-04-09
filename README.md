@@ -27,5 +27,5 @@ Final submission _missing_ features:
 |  Green  |        J       |        L        |
 | Magenta |   NumBlock 4   |    NumBlock 6   |  
   
-Pause toggle: **Space**
+Pause toggle: **Space**  
 Fullscreen toggle: **F11**
